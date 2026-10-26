@@ -1,0 +1,48 @@
+---
+http_listen_addr: :6060
+introspection_addr: :8089
+log_level: info
+
+indexer:
+  connstring: host=clair-db port=5432 user=clair password=clair dbname=clair sslmode=disable
+  scanlock_retry: 10
+  layer_scan_concurrency: 5
+  migrations: true
+
+matcher:
+  connstring: host=clair-db port=5432 user=clair password=clair dbname=clair sslmode=disable
+  indexer_addr: ""
+  migrations: true
+  period: 6h
+  disable_updaters: true
+  update_retention: 2
+
+matchers:
+  names:
+    - "alpine-matcher"
+    - "debian-matcher"
+    - "gobin"
+    - "java-maven"
+    - "python"
+    - "rhel"
+    - "rhel-container-matcher"
+    - "suse"
+    - "ubuntu-matcher"
+
+updaters:
+  sets:
+    - "alpine"
+    - "debian"
+    - "osv"
+    - "rhcc"
+    - "rhel"
+    - "suse"
+    - "ubuntu"
+
+notifier:
+  connstring: host=clair-db port=5432 user=clair password=clair dbname=clair sslmode=disable
+  migrations: true
+  indexer_addr: ""
+  matcher_addr: ""
+  poll_interval: 5m
+  delivery_interval: 1m

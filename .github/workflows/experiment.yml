@@ -3,64 +3,156 @@ name: Experimento SCA
 on:
   workflow_dispatch:
     inputs:
-      imagem:
-        description: 'Imagem com digest fixo'
+      repeticoes:
+        description: 'Repetições por imagem'
         required: true
-        default: 'debian@sha256:58ce6f1271ae1c8a2006ff7d3e54e9874d839f573d8009c20154ad0f2fb0a225'
+        default: '5'
+
+concurrency:
+  group: lab-tcc
+  cancel-in-progress: false
+
+env:
+  GRYPE_DB_AUTO_UPDATE: "false"
+  GRYPE_DB_VALIDATE_AGE: "false"
+  CLAIR_API: http://localhost:6060
 
 jobs:
   preparar:
     runs-on: [self-hosted, lab-tcc]
+    outputs:
+      matriz: ${{ steps.matriz.outputs.matriz }}
     steps:
       - uses: actions/checkout@v4
-      - name: Pull da imagem-alvo
-        run: docker pull ${{ inputs.imagem }}
 
-  trivy:
+      - name: Montar matriz a partir do dataset
+        id: matriz
+        run: |
+          M=$(jq -R -s -c 'split("\n") | map(select(length > 0) | split("\t"))
+                | to_entries | map({id: (.key + 1), nome: .value[0], ref: .value[1]})' dataset/dataset.tsv)
+          echo "$M" | jq .
+          echo "matriz=$M" >> "$GITHUB_OUTPUT"
+
+      - name: Conferir configuração do Clair
+        run: |
+          diff infra/clair/config.yaml ~/clair/config.yaml \
+            || { echo "ERRO: config.yaml em execução difere do versionado"; exit 1; }
+          grep -q 'disable_updaters: true' ~/clair/config.yaml \
+            || { echo "ERRO: bases do Clair não estão congeladas"; exit 1; }
+          curl -sf "$CLAIR_API/indexer/api/v1/index_state" > /dev/null \
+            || { echo "ERRO: API do Clair não responde"; exit 1; }
+          echo "Clair OK: configuração versionada, bases congeladas, API respondendo"
+
+      - name: Registrar ambiente e bases
+        run: |
+          mkdir -p meta
+          {
+            echo "inicio: $(date -Is)"
+            echo "commit: ${{ github.sha }}"
+            echo "ref: ${{ github.ref_name }}"
+            echo "kernel: $(uname -r)"
+            echo "docker: $(docker version --format '{{.Server.Version}}')"
+            echo "runner: $(~/actions-runner/config.sh --version)"
+            trivy --version
+            grype version
+            grype db status
+            clairctl --version
+          } > meta/ambiente.txt 2>&1
+          cp ~/.cache/trivy/db/metadata.json meta/trivy-db.json
+          cp ~/.cache/trivy/java-db/metadata.json meta/trivy-java-db.json 2>/dev/null || true
+          cp dataset/dataset.tsv meta/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: meta
+          path: meta/
+
+  varredura:
     needs: preparar
     runs-on: [self-hosted, lab-tcc]
+    timeout-minutes: 120
+    strategy:
+      max-parallel: 1
+      fail-fast: false
+      matrix:
+        img: ${{ fromJSON(needs.preparar.outputs.matriz) }}
+    name: ${{ matrix.img.nome }}
     steps:
-      - name: Varredura Trivy
+      - uses: actions/checkout@v4
+
+      - name: Pull da imagem (fora da medição)
+        run: docker pull "${{ matrix.img.ref }}"
+
+      - name: Manifesto para o Clair (fora da medição)
+        run: clairctl manifest "${{ matrix.img.ref }}" > manifest.json
+
+      - name: Varreduras (Trivy, Grype e Clair em sequência)
         run: |
-          mkdir -p resultados
-          INICIO=$(date +%s%N)
-          trivy image --skip-db-update --format json \
-                --output resultados/trivy.json "${{ inputs.imagem }}"
-          FIM=$(date +%s%N)
-          echo "trivy,$(( (FIM-INICIO)/1000000 ))" >> resultados/tempos.csv
+          set +e
+          REF="${{ matrix.img.ref }}"
+          NOME="${{ matrix.img.nome }}"
+          ID=$(printf '%02d' ${{ matrix.img.id }})
+          OUT="resultados/$ID"
+          mkdir -p "$OUT"
+          CSV="$OUT/tempos.csv"
+          ms() { echo $(( ($2 - $1) / 1000000 )); }
+
+          for REP in $(seq 1 ${{ inputs.repeticoes }}); do
+            if [ "$REP" -eq 1 ]; then
+              COND=frio
+              trivy clean --scan-cache >/dev/null 2>&1
+              clairctl delete "$(jq -r .hash manifest.json)" >/dev/null 2>&1
+            else
+              COND=quente
+            fi
+
+            T0=$(date +%s%N)
+            trivy image --skip-db-update --skip-java-db-update --quiet \
+              --format json --output "$OUT/trivy_r$REP.json" "$REF"
+            RC=$?; T1=$(date +%s%N)
+            echo "$NOME,trivy,$REP,$COND,$(ms $T0 $T1),$RC" >> "$CSV"
+
+            T0=$(date +%s%N)
+            grype "docker:$REF" -o json -q > "$OUT/grype_r$REP.json"
+            RC=$?; T1=$(date +%s%N)
+            echo "$NOME,grype,$REP,$COND,$(ms $T0 $T1),$RC" >> "$CSV"
+
+            T0=$(date +%s%N)
+            ./scripts/clair-scan.sh "$REF" "$OUT/clair_r$REP.json" manifest.json > "$OUT/clair_r$REP.txt"
+            RC=$?; T1=$(date +%s%N)
+            echo "$NOME,clair,$REP,$COND,$(ms $T0 $T1),$RC" >> "$CSV"
+          done
+          cat "$CSV"
+
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: trivy
+          name: img-${{ matrix.img.id }}
           path: resultados/
 
-  grype:
-    needs: trivy
+  consolidar:
+    needs: varredura
+    if: always()
     runs-on: [self-hosted, lab-tcc]
-    env:
-      GRYPE_DB_AUTO_UPDATE: "false"
     steps:
-      - name: Varredura Grype
-        run: |
-          mkdir -p resultados
-          INICIO=$(date +%s%N)
-          grype "${{ inputs.imagem }}" -o json > resultados/grype.json
-          FIM=$(date +%s%N)
-          echo "grype,$(( (FIM-INICIO)/1000000 ))" >> resultados/tempos.csv
-      - uses: actions/upload-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
-          name: grype
-          path: resultados/
+          pattern: img-*
+          path: todos
+          merge-multiple: true
 
-  clair:
-    needs: grype
-    runs-on: [self-hosted, lab-tcc]
-    steps:
-      - name: Varredura Clair
+      - name: Unificar tempos
         run: |
-          mkdir -p resultados
-          ~/clair/clair-scan.sh "${{ inputs.imagem }}" resultados/clair.json \
-            | tee resultados/clair-metricas.txt
+          echo "imagem,ferramenta,repeticao,condicao,tempo_ms,codigo_saida" > tempos.csv
+          cat todos/*/tempos.csv >> tempos.csv
+          echo "Linhas de medição: $(($(wc -l < tempos.csv) - 1))"
+          echo "Execuções com código de saída diferente de 0:"
+          awk -F, 'NR>1 && $6!=0' tempos.csv || true
+          column -s, -t tempos.csv | head -40
+
       - uses: actions/upload-artifact@v4
         with:
-          name: clair
-          path: resultados/
+          name: consolidado
+          path: |
+            tempos.csv
+            todos/

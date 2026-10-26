@@ -1,0 +1,29 @@
+services:
+  clair-db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: clair
+      POSTGRES_PASSWORD: clair
+      POSTGRES_DB: clair
+    volumes:
+      - clair-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U clair"]
+      interval: 5s
+      retries: 10
+
+  clair:
+    image: quay.io/projectquay/clair:4.9.0
+    depends_on:
+      clair-db:
+        condition: service_healthy
+    environment:
+      CLAIR_MODE: combo
+      CLAIR_CONF: /config/config.yaml
+    volumes:
+      - ./config.yaml:/config/config.yaml:ro
+    ports:
+      - "6060:6060"
+
+volumes:
+  clair-pgdata:
