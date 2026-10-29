@@ -20,6 +20,7 @@ env:
   GRYPE_DB_AUTO_UPDATE: "false"
   GRYPE_DB_VALIDATE_AGE: "false"
   CLAIR_API: http://localhost:6060
+  COLETA_DIR: /home/jader/tcc/coletas/${{ github.run_id }}
 
 jobs:
   preparar:
@@ -71,10 +72,16 @@ jobs:
           cp ~/.cache/trivy/java-db/metadata.json meta/trivy-java-db.json 2>/dev/null || true
           cp "${{ inputs.dataset }}" meta/
 
+      - name: Salvar meta local
+        run: |
+          mkdir -p "$COLETA_DIR"
+          cp -r meta "$COLETA_DIR/"
+
       - uses: actions/upload-artifact@v4
         with:
           name: meta
           path: meta/
+          retention-days: 30
 
   scan:
     needs: preparar
@@ -138,11 +145,18 @@ jobs:
           done
           cat "$CSV"
 
+      - name: Salvar cópia local
+        if: always()
+        run: |
+          mkdir -p "$COLETA_DIR"
+          cp -r resultados/* "$COLETA_DIR/"
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: img-${{ matrix.img.id }}
           path: resultados/
+          retention-days: 1
 
   resultados:
     needs: scan
@@ -168,6 +182,13 @@ jobs:
           awk -F, 'NR>1 && $6!=0' tempos.csv || true
           column -s, -t tamanhos.csv
 
+      - name: Salvar consolidado local
+        run: |
+          mkdir -p "$COLETA_DIR"
+          cp tempos.csv tamanhos.csv "$COLETA_DIR/"
+          echo "Cópia local em $COLETA_DIR"
+          du -sh "$COLETA_DIR"
+
       - uses: actions/upload-artifact@v4
         with:
           name: consolidado
@@ -175,3 +196,4 @@ jobs:
             tempos.csv
             tamanhos.csv
             todos/
+          retention-days: 30
