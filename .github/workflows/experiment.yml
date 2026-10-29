@@ -3,6 +3,10 @@ name: Experimento SCA
 on:
   workflow_dispatch:
     inputs:
+      dataset:
+        description: 'Arquivo de dataset (TSV: nome<TAB>repo@sha256:...)'
+        required: true
+        default: 'dataset/dataset.tsv'
       repeticoes:
         description: 'Repetições por imagem'
         required: true
@@ -28,8 +32,11 @@ jobs:
       - name: Montar matriz a partir do dataset
         id: matriz
         run: |
+          DS="${{ inputs.dataset }}"
+          [ -f "$DS" ] || { echo "ERRO: dataset '$DS' não encontrado no repositório"; exit 1; }
           M=$(jq -R -s -c 'split("\n") | map(select(length > 0) | split("\t"))
-                | to_entries | map({id: (.key + 1), nome: .value[0], ref: .value[1]})' dataset/dataset.tsv)
+                | to_entries | map({id: (.key + 1), nome: .value[0], ref: .value[1]})' "$DS")
+          echo "Dataset: $DS ($(echo "$M" | jq length) imagens)"
           echo "$M" | jq .
           echo "matriz=$M" >> "$GITHUB_OUTPUT"
 
@@ -50,6 +57,8 @@ jobs:
             echo "inicio: $(date -Is)"
             echo "commit: ${{ github.sha }}"
             echo "ref: ${{ github.ref_name }}"
+            echo "dataset: ${{ inputs.dataset }}"
+            echo "repeticoes: ${{ inputs.repeticoes }}"
             echo "kernel: $(uname -r)"
             echo "docker: $(docker version --format '{{.Server.Version}}')"
             echo "runner: $(~/actions-runner/config.sh --version)"
@@ -60,7 +69,7 @@ jobs:
           } > meta/ambiente.txt 2>&1
           cp ~/.cache/trivy/db/metadata.json meta/trivy-db.json
           cp ~/.cache/trivy/java-db/metadata.json meta/trivy-java-db.json 2>/dev/null || true
-          cp dataset/dataset.tsv meta/
+          cp "${{ inputs.dataset }}" meta/
 
       - uses: actions/upload-artifact@v4
         with:
@@ -80,8 +89,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Pull da imagem (fora da medição)
-        run: docker pull "${{ matrix.img.ref }}"
+      - name: Pull da imagem e registro do tamanho (fora da medição)
+        run: |
+          OUT="resultados/$(printf '%02d' ${{ matrix.img.id }})"
+          mkdir -p "$OUT"
+          docker pull "${{ matrix.img.ref }}"
+          docker image inspect --format '{{.Size}}' "${{ matrix.img.ref }}" > "$OUT/tamanho_bytes.txt"
+          echo "${{ matrix.img.nome }}" > "$OUT/nome.txt"
+          echo "Tamanho: $(numfmt --to=iec < "$OUT/tamanho_bytes.txt")"
 
       - name: Manifesto para o Clair (fora da medição)
         run: clairctl manifest "${{ matrix.img.ref }}" > manifest.json
@@ -91,8 +106,7 @@ jobs:
           set +e
           REF="${{ matrix.img.ref }}"
           NOME="${{ matrix.img.nome }}"
-          ID=$(printf '%02d' ${{ matrix.img.id }})
-          OUT="resultados/$ID"
+          OUT="resultados/$(printf '%02d' ${{ matrix.img.id }})"
           mkdir -p "$OUT"
           CSV="$OUT/tempos.csv"
           ms() { echo $(( ($2 - $1) / 1000000 )); }
@@ -141,18 +155,23 @@ jobs:
           path: todos
           merge-multiple: true
 
-      - name: Unificar tempos
+      - name: Unificar tempos e tamanhos
         run: |
           echo "imagem,ferramenta,repeticao,condicao,tempo_ms,codigo_saida" > tempos.csv
           cat todos/*/tempos.csv >> tempos.csv
+          echo "imagem,tamanho_bytes" > tamanhos.csv
+          for d in todos/*/; do
+            echo "$(cat "$d/nome.txt"),$(cat "$d/tamanho_bytes.txt")" >> tamanhos.csv
+          done
           echo "Linhas de medição: $(($(wc -l < tempos.csv) - 1))"
           echo "Execuções com código de saída diferente de 0:"
           awk -F, 'NR>1 && $6!=0' tempos.csv || true
-          column -s, -t tempos.csv | head -40
+          column -s, -t tamanhos.csv
 
       - uses: actions/upload-artifact@v4
         with:
           name: consolidado
           path: |
             tempos.csv
+            tamanhos.csv
             todos/
