@@ -145,7 +145,7 @@ jobs:
           path: resultados/
 
   resultados:
-    needs: varredura
+    needs: scan
     if: always()
     runs-on: [self-hosted, lab-tcc]
     steps:
