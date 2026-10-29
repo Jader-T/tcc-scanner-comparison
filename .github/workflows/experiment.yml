@@ -76,7 +76,7 @@ jobs:
           name: meta
           path: meta/
 
-  varredura:
+  scan:
     needs: preparar
     runs-on: [self-hosted, lab-tcc]
     timeout-minutes: 120
@@ -144,7 +144,7 @@ jobs:
           name: img-${{ matrix.img.id }}
           path: resultados/
 
-  consolidar:
+  resultados:
     needs: varredura
     if: always()
     runs-on: [self-hosted, lab-tcc]
