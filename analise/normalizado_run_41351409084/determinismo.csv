@@ -1,0 +1,13 @@
+imagem,ferramenta,repeticao,ids_ref,ids,so_ref,so_rep
+tcc-referencia:1.0,trivy,1,208,208,0,0
+tcc-referencia:1.0,trivy,2,208,208,0,0
+tcc-referencia:1.0,trivy,4,208,208,0,0
+tcc-referencia:1.0,trivy,5,208,208,0,0
+tcc-referencia:1.0,grype,1,245,245,0,0
+tcc-referencia:1.0,grype,2,245,245,0,0
+tcc-referencia:1.0,grype,4,245,245,0,0
+tcc-referencia:1.0,grype,5,245,245,0,0
+tcc-referencia:1.0,clair,1,199,199,0,0
+tcc-referencia:1.0,clair,2,199,199,0,0
+tcc-referencia:1.0,clair,4,199,199,0,0
+tcc-referencia:1.0,clair,5,199,199,0,0

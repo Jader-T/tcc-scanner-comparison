@@ -1,0 +1,17 @@
+consolidado: /home/jader/tcc/coletas/41351409084/artefato/consolidado
+imagens: 1
+medições de tempo: 15 (repetições: 1, 2, 3, 4, 5)
+achados (repetição 3): 1465
+
+Avisos
+  nenhum
+
+Relatórios sem vulnerabilidades (repetição 3)
+  nenhum
+
+Determinismo (IDs da visão padrão comparados à repetição de referência)
+  comparações: 12; com diferença: 0
+
+IDs únicos por imagem (padrão | normalizada | completa)
+  imagem                             trivy                 grype                 clair
+  tcc-referencia:1.0     208    208    208     245    245    245     199    199    199

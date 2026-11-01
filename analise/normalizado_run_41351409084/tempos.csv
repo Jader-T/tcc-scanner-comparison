@@ -1,0 +1,16 @@
+ordem,imagem,ferramenta,repeticao,condicao,tempo_ms,tempo_s,codigo_saida,tamanho_bytes,tamanho_mb
+1,tcc-referencia:1.0,trivy,1,frio,10737,10.737,0,199022910,199.0
+1,tcc-referencia:1.0,grype,1,frio,32179,32.179,0,199022910,199.0
+1,tcc-referencia:1.0,clair,1,frio,9345,9.345,0,199022910,199.0
+1,tcc-referencia:1.0,trivy,2,quente,1412,1.412,0,199022910,199.0
+1,tcc-referencia:1.0,grype,2,quente,34542,34.542,0,199022910,199.0
+1,tcc-referencia:1.0,clair,2,quente,1078,1.078,0,199022910,199.0
+1,tcc-referencia:1.0,trivy,3,quente,1415,1.415,0,199022910,199.0
+1,tcc-referencia:1.0,grype,3,quente,34747,34.747,0,199022910,199.0
+1,tcc-referencia:1.0,clair,3,quente,1135,1.135,0,199022910,199.0
+1,tcc-referencia:1.0,trivy,4,quente,1566,1.566,0,199022910,199.0
+1,tcc-referencia:1.0,grype,4,quente,39421,39.421,0,199022910,199.0
+1,tcc-referencia:1.0,clair,4,quente,933,0.933,0,199022910,199.0
+1,tcc-referencia:1.0,trivy,5,quente,1451,1.451,0,199022910,199.0
+1,tcc-referencia:1.0,grype,5,quente,38924,38.924,0,199022910,199.0
+1,tcc-referencia:1.0,clair,5,quente,1157,1.157,0,199022910,199.0

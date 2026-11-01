@@ -1,0 +1,2 @@
+ordem,imagem,tamanho_bytes,tamanho_mb,so,eosl_trivy,distro_grype,clair_pacotes
+1,tcc-referencia:1.0,199022910,199.0,debian 13.1,nao,debian 13.1,107

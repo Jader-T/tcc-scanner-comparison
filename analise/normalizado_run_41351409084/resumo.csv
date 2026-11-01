@@ -1,0 +1,10 @@
+ordem,imagem,ferramenta,visao,ids_unicos,achados,pacotes_afetados,critica,alta,media,baixa,negligivel,desconhecida,ids_os,ids_aplicacao,ids_com_correcao,ids_temporarios
+1,tcc-referencia:1.0,trivy,padrao,208,483,55,7,40,93,64,0,4,181,27,137,5
+1,tcc-referencia:1.0,trivy,normalizada,208,483,55,7,40,93,64,0,4,181,27,137,5
+1,tcc-referencia:1.0,trivy,completa,208,483,55,7,40,93,64,0,4,181,27,137,5
+1,tcc-referencia:1.0,grype,padrao,245,519,53,15,85,100,18,27,0,174,71,177,0
+1,tcc-referencia:1.0,grype,normalizada,245,519,53,15,85,100,18,27,0,174,71,177,0
+1,tcc-referencia:1.0,grype,completa,245,519,53,15,85,100,18,27,0,174,71,177,0
+1,tcc-referencia:1.0,clair,padrao,199,463,53,0,0,13,32,0,154,180,19,127,5
+1,tcc-referencia:1.0,clair,normalizada,199,463,53,0,0,13,32,0,154,180,19,127,5
+1,tcc-referencia:1.0,clair,completa,199,463,53,0,0,13,32,0,154,180,19,127,5
