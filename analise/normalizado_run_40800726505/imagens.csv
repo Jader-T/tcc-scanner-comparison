@@ -1,0 +1,17 @@
+ordem,imagem,tamanho_bytes,tamanho_mb,so,eosl_trivy,distro_grype,clair_pacotes
+1,debian:10,183205924,183.2,debian 10.13,sim,debian 10.13,91
+2,debian:12,181401928,181.4,debian 12.15,nao,debian 12.15,88
+3,ubuntu:18.04,97472308,97.5,ubuntu 18.04,sim,ubuntu 18.04,89
+4,ubuntu:24.04,117402154,117.4,ubuntu 24.04,nao,ubuntu 24.04,92
+5,alpine:3.14,9102623,9.1,alpine 3.14.10,sim,alpine 3.14.10,14
+6,alpine:3.21,12094085,12.1,alpine 3.21.8,nao,alpine 3.21.8,15
+7,redhat/ubi9,313721108,313.7,redhat 9.8,nao,redhat 9.8,188
+8,python:3.8-slim,188807287,188.8,debian 12.7,nao,debian 12.7,109
+9,python:3.12-slim,177279625,177.3,debian 13.7,nao,debian 13.7,88
+10,node:16,1335863767,1335.9,debian 10.13,sim,debian 10.13,417
+11,node:22,1635160853,1635.2,debian 12.15,nao,debian 12.15,413
+12,golang:1.23,1230637585,1230.6,debian 12.11,nao,debian 12.11,207
+13,eclipse-temurin:21-jre,456223311,456.2,ubuntu 26.04,nao,ubuntu 26.04,151
+14,nginx:1.27,279330627,279.3,debian 12.11,nao,debian 12.11,150
+15,postgres:17,639934476,639.9,debian 13.7,nao,debian 13.7,146
+16,wordpress:6.7,997306865,997.3,debian 12.10,nao,debian 12.10,252

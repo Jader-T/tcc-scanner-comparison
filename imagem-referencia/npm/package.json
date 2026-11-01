@@ -1,0 +1,10 @@
+{
+  "name": "tcc-referencia",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Dependencias npm deliberadamente vulneraveis da imagem de referencia do TCC",
+  "dependencies": {
+    "lodash": "4.17.15",
+    "minimist": "1.2.0"
+  }
+}

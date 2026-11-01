@@ -1,0 +1,6 @@
+bloco	ecossistema	pacote	versao	caminho
+pip	PyPI	Jinja2	2.10	/usr/local/lib/python3.9/site-packages
+pip	PyPI	requests	2.19.1	/usr/local/lib/python3.9/site-packages
+npm	npm	lodash	4.17.15	/opt/app/node_modules/lodash/package.json
+npm	npm	minimist	1.2.0	/opt/app/node_modules/minimist/package.json
+jar	Maven	org.apache.logging.log4j:log4j-core	2.14.1	/opt/legado/log4j-core-2.14.1.jar

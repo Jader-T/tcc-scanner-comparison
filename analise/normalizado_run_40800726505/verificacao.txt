@@ -1,0 +1,36 @@
+consolidado: /home/jader/tcc/coletas/40800726505/artefato/consolidado
+imagens: 16
+medições de tempo: 240 (repetições: 1, 2, 3, 4, 5)
+achados (repetição 1): 81517
+
+Avisos
+  nenhum
+
+Relatórios sem vulnerabilidades (repetição 1)
+  - debian:10: clair
+  - ubuntu:18.04: trivy
+  - alpine:3.14: trivy
+  - alpine:3.14: clair
+  - redhat/ubi9: clair
+
+Determinismo (IDs da visão padrão comparados à repetição de referência)
+  comparações: 192; com diferença: 0
+
+IDs únicos por imagem (padrão | normalizada | completa)
+  imagem                                 trivy                 grype                 clair
+  debian:10                   38     38     38      80     80     80       0      0      0
+  debian:12                  113    113    113     107    107    107     113    113    113
+  ubuntu:18.04                 0      0      0     157    157    157     127    127    127
+  ubuntu:24.04                22     22     22      38     38     38      38     38     38
+  alpine:3.14                  0      0      0      44     44     44       0      0      0
+  alpine:3.21                 12     12     12      13     13     13      12     12     12
+  redhat/ubi9                371    371    371     364    364    364       0      0      0
+  python:3.8-slim            289    289    289     338    338    338     284    284    284
+  python:3.12-slim            80     80     80      80     80     80      79     79     79
+  node:16                    583    199    583     503    503   1556       1      1      1
+  node:22                   3571    650   3571     618    618   3538    3553    631   3553
+  golang:1.23               6701    554   6701     555    555   6701    6642    494   6642
+  eclipse-temurin:21-jre      61     61     61      89     89     89      77     77     77
+  nginx:1.27                 474    474    474     443    443    443     478    478    478
+  postgres:17                180    180    180     114    114    114     119    119    119
+  wordpress:6.7             7688    953   7688     939    939   7673    7686    950   7686
