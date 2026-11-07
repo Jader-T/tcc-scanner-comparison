@@ -10,11 +10,11 @@ BLOQUEANTES=$(jq '[.Results[]?.Vulnerabilities[]?
 
 echo "<!-- security-gate -->"
 if [ "$BLOQUEANTES" -gt 0 ]; then
-  echo "## ❌ Security gate: reprovado"
+  echo "## Workflow reprovado"
   echo
   echo "A imagem \`$IMAGEM\` tem **$BLOQUEANTES** vulnerabilidade(s) crítica(s) ou alta(s) **com correção disponível**."
 else
-  echo "## ✅ Security gate: aprovado"
+  echo "## Workflow aprovado"
   echo
   echo "A imagem \`$IMAGEM\` não tem vulnerabilidades críticas ou altas com correção disponível."
 fi
