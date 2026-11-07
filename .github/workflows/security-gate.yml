@@ -3,10 +3,6 @@ name: security-gate
 on:
   pull_request:
     branches: [main]
-    paths:
-      - "app-exemplo/**"
-      - "scripts/resumo_gate.sh"
-      - ".github/workflows/security-gate.yml"
   push:
     branches: [main]
     paths:
@@ -59,17 +55,17 @@ jobs:
       - name: Atualizar base do Trivy
         run: |
           mkdir -p "$TRIVY_CACHE"
-          trivy image --cache-dir "$TRIVY_CACHE" --download-db-only
-          trivy image --cache-dir "$TRIVY_CACHE" --download-java-db-only
+          trivy image --cache-dir "$TRIVY_CACHE" --skip-version-check --download-db-only
+          trivy image --cache-dir "$TRIVY_CACHE" --skip-version-check --download-java-db-only
 
       - name: Gerar SBOM (CycloneDX)
         run: |
-          trivy image --cache-dir "$TRIVY_CACHE" --skip-db-update --skip-java-db-update \
+          trivy image --cache-dir "$TRIVY_CACHE" --skip-version-check --skip-db-update --skip-java-db-update \
             --format cyclonedx --output sbom.cdx.json "$IMAGEM"
 
       - name: Varredura completa
         run: |
-          trivy image --cache-dir "$TRIVY_CACHE" --skip-db-update --skip-java-db-update \
+          trivy image --cache-dir "$TRIVY_CACHE" --skip-version-check --skip-db-update --skip-java-db-update \
             --format json --output trivy.json "$IMAGEM"
 
       - name: Resumo
@@ -97,7 +93,7 @@ jobs:
 
       - name: Política de bloqueio
         run: |
-          trivy image --cache-dir "$TRIVY_CACHE" --skip-db-update --skip-java-db-update \
+          trivy image --cache-dir "$TRIVY_CACHE" --skip-version-check --skip-db-update --skip-java-db-update \
             --severity CRITICAL,HIGH --ignore-unfixed --exit-code 1 \
             --format table "$IMAGEM"
 
