@@ -1,0 +1,140 @@
+name: security-gate
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "app-exemplo/**"
+      - "scripts/resumo_gate.sh"
+      - ".github/workflows/security-gate.yml"
+  push:
+    branches: [main]
+    paths:
+      - "app-exemplo/**"
+      - "scripts/resumo_gate.sh"
+      - ".github/workflows/security-gate.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  APP_DIR: app-exemplo
+  IMAGEM: app-exemplo:${{ github.sha }}
+  REGISTRO: ghcr.io/jader-t/app-exemplo
+  # Cache separado: não altera a base congelada usada na coleta do experimento.
+  TRIVY_CACHE: /home/jader/tcc/gate/trivy-cache
+
+jobs:
+  qualidade:
+    name: qualidade
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lint do Dockerfile
+        run: docker run --rm -i hadolint/hadolint:v2.12.0 hadolint --failure-threshold error - < "$APP_DIR/Dockerfile"
+
+      - name: Testes unitários
+        run: |
+          docker build --target teste -t "app-exemplo-teste:${{ github.sha }}" "$APP_DIR"
+          docker rmi -f "app-exemplo-teste:${{ github.sha }}" > /dev/null
+
+  security-gate:
+    name: security-gate
+    needs: qualidade
+    runs-on: self-hosted
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build da imagem
+        run: docker build -t "$IMAGEM" "$APP_DIR"
+
+      - name: Atualizar base do Trivy
+        run: |
+          mkdir -p "$TRIVY_CACHE"
+          trivy image --cache-dir "$TRIVY_CACHE" --download-db-only
+          trivy image --cache-dir "$TRIVY_CACHE" --download-java-db-only
+
+      - name: Gerar SBOM (CycloneDX)
+        run: |
+          trivy image --cache-dir "$TRIVY_CACHE" --skip-db-update --skip-java-db-update \
+            --format cyclonedx --output sbom.cdx.json "$IMAGEM"
+
+      - name: Varredura completa
+        run: |
+          trivy image --cache-dir "$TRIVY_CACHE" --skip-db-update --skip-java-db-update \
+            --format json --output trivy.json "$IMAGEM"
+
+      - name: Resumo
+        run: |
+          ./scripts/resumo_gate.sh trivy.json "$IMAGEM" > resumo.md
+          cat resumo.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Comentar no pull request
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require("fs");
+            const corpo = fs.readFileSync("resumo.md", "utf8");
+            const marca = "<!-- security-gate -->";
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            const lista = await github.rest.issues.listComments({ owner, repo, issue_number });
+            const anterior = lista.data.find(c => c.body.includes(marca));
+            if (anterior) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: anterior.id, body: corpo });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body: corpo });
+            }
+
+      - name: Política de bloqueio
+        run: |
+          trivy image --cache-dir "$TRIVY_CACHE" --skip-db-update --skip-java-db-update \
+            --severity CRITICAL,HIGH --ignore-unfixed --exit-code 1 \
+            --format table "$IMAGEM"
+
+      - name: Salvar evidências
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-gate-${{ github.run_id }}
+          path: |
+            sbom.cdx.json
+            trivy.json
+            resumo.md
+          retention-days: 30
+
+      - name: Remover imagem
+        if: always() && github.event_name == 'pull_request'
+        run: docker rmi -f "$IMAGEM" > /dev/null || true
+
+  publicar:
+    name: publicar
+    needs: security-gate
+    if: github.event_name == 'push'
+    runs-on: self-hosted
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Publicar no GitHub Container Registry
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          docker tag "$IMAGEM" "$REGISTRO:${{ github.sha }}"
+          docker tag "$IMAGEM" "$REGISTRO:latest"
+          docker push "$REGISTRO:${{ github.sha }}"
+          docker push "$REGISTRO:latest"
+
+      - name: Encerrar
+        if: always()
+        run: |
+          docker logout ghcr.io || true
+          docker rmi -f "$IMAGEM" "$REGISTRO:${{ github.sha }}" "$REGISTRO:latest" > /dev/null || true
